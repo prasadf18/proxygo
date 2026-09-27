@@ -24,16 +24,18 @@ func HandleConnection(conn net.Conn, target string, c *cache.Cache) {
 
 	key := req.Method + " " + req.URL.String()
 
-	if cached, found := c.Get(key); found {
-		log.Printf("cache HIT for %s", key)
-		_, err = conn.Write(cached)
-		if err != nil {
-			log.Printf("failed to write cached response: %v", err)
+	if req.Method == http.MethodGet {
+		if cached, found := c.Get(key); found {
+			log.Printf("cache HIT for %s", key)
+			_, err = conn.Write(cached)
+			if err != nil {
+				log.Printf("failed to write cached response: %v", err)
+			}
+			return
 		}
-		return
-	}
 
-	log.Printf("cache MISS for %s", key)
+		log.Printf("cache MISS for %s", key)
+	}
 
 	upstreamConn, err := net.Dial("tcp", target)
 	if err != nil {
@@ -63,7 +65,9 @@ func HandleConnection(conn net.Conn, target string, c *cache.Cache) {
 		return
 	}
 
-	c.Set(key, buf.Bytes())
+	if req.Method == http.MethodGet && resp.StatusCode == http.StatusOK {
+		c.Set(key, buf.Bytes())
+	}
 
 	_, err = conn.Write(buf.Bytes())
 	if err != nil {
