@@ -39,7 +39,7 @@ func handleConnection(conn net.Conn) {
 
 	body := "hello from proxy"
 	response := "HTTP/1.1 200 OK\r\n" +
-		"Content-Length: 17\r\n" +
+		"Content-Length: 16\r\n" +
 		"Content-Type: text/plain\r\n" +
 		"\r\n" +
 		body
