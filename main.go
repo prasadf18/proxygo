@@ -41,12 +41,27 @@ func handleConnection(conn net.Conn, target string) {
 
 	log.Printf("received request: %s %s (target: %s)", req.Method, req.URL.Path, target)
 
-	body := "hello from proxy"
-	response := "HTTP/1.1 200 OK\r\n" +
-		"Content-Length: 16\r\n" +
-		"Content-Type: text/plain\r\n" +
-		"\r\n" +
-		body
+	upstreamConn, err := net.Dial("tcp", target)
+	if err != nil {
+		log.Printf("failed to connect to upstream: %v", err)
+		return
+	}
+	defer upstreamConn.Close()
+	err = req.Write(upstreamConn)
+	if err != nil {
+		log.Printf("failed to forward request: %v", err)
+		return
+	}
+	upstreamReader := bufio.NewReader(upstreamConn)
+	resp, err := http.ReadResponse(upstreamReader, req)
+	if err != nil {
+		log.Printf("failed to read upstream response: %v", err)
+		return
+	}
 
-	conn.Write([]byte(response))
+	err = resp.Write(conn)
+	if err != nil {
+		log.Printf("failed to relay response to client: %v", err)
+		return
+	}
 }
