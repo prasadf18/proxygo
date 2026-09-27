@@ -7,10 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/prasadf18/proxygo/internal/cache"
 )
 
 func TestHandleConnectionForwardsRequest(t *testing.T) {
-	// Fake upstream server
+	
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("hello from fake upstream"))
 	}))
@@ -18,7 +20,8 @@ func TestHandleConnectionForwardsRequest(t *testing.T) {
 
 	upstreamAddr := upstream.Listener.Addr().String()
 
-	// Start a listener for the proxy on a random free port
+	c := cache.NewCache(30 * time.Second)
+
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatalf("failed to start proxy listener: %v", err)
@@ -31,11 +34,11 @@ func TestHandleConnectionForwardsRequest(t *testing.T) {
 			if err != nil {
 				return
 			}
-			go HandleConnection(conn, upstreamAddr)
+			go HandleConnection(conn, upstreamAddr, c)
 		}
 	}()
 
-	time.Sleep(100 * time.Millisecond) // give the listener a moment
+	time.Sleep(100 * time.Millisecond) 
 
 	resp, err := http.Get("http://" + ln.Addr().String() + "/test")
 	if err != nil {
