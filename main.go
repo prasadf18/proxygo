@@ -2,18 +2,22 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"log"
 	"net"
 	"net/http"
 )
 
 func main() {
+	target := flag.String("target", "localhost:9000", "upstream address to proxy to")
+	flag.Parse()
+
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	defer ln.Close()
-	log.Println("listening on :8080")
+	log.Printf("listening on :8080, forwarding to %s", *target)
 
 	for {
 		conn, err := ln.Accept()
@@ -21,11 +25,11 @@ func main() {
 			log.Printf("accept error: %v", err)
 			continue
 		}
-		go handleConnection(conn)
+		go handleConnection(conn, *target)
 	}
 }
 
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, target string) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -35,7 +39,7 @@ func handleConnection(conn net.Conn) {
 		return
 	}
 
-	log.Printf("received request: %s %s", req.Method, req.URL.Path)
+	log.Printf("received request: %s %s (target: %s)", req.Method, req.URL.Path, target)
 
 	body := "hello from proxy"
 	response := "HTTP/1.1 200 OK\r\n" +
