@@ -2,12 +2,15 @@ package proxy
 
 import (
 	"bufio"
+	"bytes"
 	"log"
 	"net"
 	"net/http"
+
+	"github.com/prasadf18/proxygo/internal/cache"
 )
 
-func HandleConnection(conn net.Conn, target string) {
+func HandleConnection(conn net.Conn, target string, c *cache.Cache) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -18,6 +21,19 @@ func HandleConnection(conn net.Conn, target string) {
 	}
 
 	log.Printf("received request: %s %s (target: %s)", req.Method, req.URL.Path, target)
+
+	key := req.Method + " " + req.URL.String()
+
+	if cached, found := c.Get(key); found {
+		log.Printf("cache HIT for %s", key)
+		_, err = conn.Write(cached)
+		if err != nil {
+			log.Printf("failed to write cached response: %v", err)
+		}
+		return
+	}
+
+	log.Printf("cache MISS for %s", key)
 
 	upstreamConn, err := net.Dial("tcp", target)
 	if err != nil {
@@ -39,7 +55,17 @@ func HandleConnection(conn net.Conn, target string) {
 		return
 	}
 
-	err = resp.Write(conn)
+	var buf bytes.Buffer
+
+	err = resp.Write(&buf)
+	if err != nil {
+		log.Printf("failed to serialize response: %v", err)
+		return
+	}
+
+	c.Set(key, buf.Bytes())
+
+	_, err = conn.Write(buf.Bytes())
 	if err != nil {
 		log.Printf("failed to relay response to client: %v", err)
 		return
