@@ -36,4 +36,13 @@ func handleConnection(conn net.Conn) {
 	}
 
 	log.Printf("received request: %s %s", req.Method, req.URL.Path)
+
+	body := "hello from proxy"
+	response := "HTTP/1.1 200 OK\r\n" +
+		"Content-Length: 17\r\n" +
+		"Content-Type: text/plain\r\n" +
+		"\r\n" +
+		body
+
+	conn.Write([]byte(response))
 }
