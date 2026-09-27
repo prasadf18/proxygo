@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"net"
+	"net/http"
 )
 
 func main() {
@@ -19,7 +21,19 @@ func main() {
 			log.Printf("accept error: %v", err)
 			continue
 		}
-		log.Printf("accepted connection from %s", conn.RemoteAddr())
-		conn.Close()
+		go handleConnection(conn)
 	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+	req, err := http.ReadRequest(reader)
+	if err != nil {
+		log.Printf("failed to read request: %v", err)
+		return
+	}
+
+	log.Printf("received request: %s %s", req.Method, req.URL.Path)
 }
