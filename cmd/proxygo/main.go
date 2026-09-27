@@ -12,9 +12,11 @@ import (
 
 func main() {
 	target := flag.String("target", "localhost:9000", "upstream address to proxy to")
+	ttl := flag.Duration("cache-ttl", 30*time.Second, "cache entry time-to-live")
+
 	flag.Parse()
 
-	c := cache.NewCache(30 * time.Second)
+	c := cache.NewCache(*ttl)
 
 	ln, err := net.Listen("tcp", ":8080")
 	if err != nil {
