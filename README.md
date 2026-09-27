@@ -2,7 +2,7 @@
 
 A small HTTP reverse proxy in Go, with a cache built in. No `net/http/httputil` — the request parsing, forwarding, and response relaying is all hand-rolled over raw TCP connections.
 
-![Architecture](./architecture.png)
+![Architecture](./archtecture.PNG)
 
 ## What it does
 
